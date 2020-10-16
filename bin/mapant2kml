@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+
+import sys
+import mapant
+
+if __name__ == "__main__":
+    kwargs = mapant.parse_mapant2kml(sys.argv[1:])
+    mapant.mapant2kml(**kwargs)
