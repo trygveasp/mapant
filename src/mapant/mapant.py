@@ -23,7 +23,7 @@ class WorldFileFromFile(WorldFile):
         f = None
         for line in range(1, 7):
             line_text = fh.readline().rstrip()
-            print(line_text)
+            # print(line_text)
             factor = float(line_text)
             if line == 1:
                 a = factor
@@ -44,10 +44,9 @@ class WorldFileFromFile(WorldFile):
 
 
 class MapantProjection(object):
-    def __init__(self, world_file, nx, ny, zone="33N"):
+    def __init__(self, world_file, nx, ny):
         self.world_file = world_file
-        self.zone = zone
-        proj_string = "+proj=utm +zone=" + zone + " +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+        proj_string = "+proj=utm +zone=33N +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
         self.projection = pyproj.Proj(proj_string)
         self.nx = nx
         self.ny = ny
@@ -57,16 +56,12 @@ class MapantProjection(object):
         self.start_y = self.world_file.f
         self.dx = self.world_file.a
         self.dy = self.world_file.e
+        # print("Constructed MapantProjection ", self.start_x, self.start_y)
 
-        print("Constructed MapantProjection ", self.start_x, self.start_y)
-
-    # Set UTM ccordinated in grid
+    # Transform UTM projection to target projection
     def transform(self, proj_string, xx, yy):
         out_projection = pyproj.Proj(proj_string)
-        print(xx)
-        print(yy)
         positions = pyproj.transform(self.projection, out_projection, xx, yy)
-        print(positions)
         return positions
 
     def transform_grid(self, proj_string):
@@ -106,25 +101,19 @@ class MapantProjection(object):
 
         pos = self.transform("EPSG:4326", xx, yy)
 
-        print(pos, len(pos))
         string = ""
         for p in range(0, len(pos[0])):
             string = string + " " + str(pos[1][p]) + "," + str(pos[0][p])
-        print(string)
+        # print(string)
         return string
 
     def transform_to_kml_latlonbox(self):
-
-        xx = []
-        yy = []
 
         if self.rotation_x != 0 or self.rotation_y != 0:
             raise NotImplementedError
 
         extra_x = float(self.dx) * 0.5
         extra_y = float(self.dy) * 0.5
-        # extra_x = -1
-        # extra_y = -1
         nx = float(self.nx) * 0.5
         ny = float(self.ny) * 0.5
 
@@ -136,24 +125,19 @@ class MapantProjection(object):
         y_north = self.start_y - extra_y
         y_south = self.start_y - extra_y + ((self.ny + 1) * self.dy)
 
+        xx = []
+        yy = []
         # North
         xx.append(center_x)
         yy.append(y_north)
-
         # South
         xx.append(center_x)
         yy.append(y_south)
-
         # West
         xx.append(x_west)
         yy.append(center_y)
-
         # East
         xx.append(x_east)
-        yy.append(center_y)
-
-        # Center
-        xx.append(center_x)
         yy.append(center_y)
 
         pos = self.transform("EPSG:4326", xx, yy)
@@ -161,10 +145,6 @@ class MapantProjection(object):
         south = pos[0][1]
         west = pos[1][2]
         east = pos[1][3]
-        center_lon = pos[1][4]
-        center_lat = pos[0][4]
-
-        # atan(($nw_lng - $sw_lng) / ($sw_lat - $nw_lat) / 2)
 
         pos = self.transform("EPSG:4326", [x_west, x_west], [y_north, y_south])
         nw_lng = float(pos[1][0])
@@ -174,9 +154,9 @@ class MapantProjection(object):
         rotation = math.degrees(math.atan((nw_lng - sw_lng) / (sw_lat - nw_lat) / 2))
         # rotation = 0
 
-        print("nx, ny", nx, ny, self.nx, self.ny)
-        print("center", center_lon, center_lat, center_x, center_y)
-        print("north, south, west, east, rotation: ", north, south, west, east, rotation)
+        # print("nx, ny", nx, ny, self.nx, self.ny)
+        # print("center", center_lon, center_lat, center_x, center_y)
+        # print("north, south, west, east, rotation: ", north, south, west, east, rotation)
         return north, south, west, east, rotation
 
 
@@ -194,11 +174,13 @@ class MapantImage(object):
 
 
 class KMLGroundOverlay(object):
-    def __init__(self):
-        self.name1 = "Test1"
-        self.name2 = "Test2"
-        self.description1 = "Test description1"
-        self.description2 = "Test description2"
+    def __init__(self, name=None, desc=None):
+        if name is None:
+            name = "Name of data"
+        if desc is None:
+            desc = "Description of the data"
+        self.name = name
+        self.description = desc
 
     def write_kml(self, fname, mapant_images, mode="LatLonBox"):
 
@@ -209,13 +191,12 @@ class KMLGroundOverlay(object):
         else:
             fh.write('<kml xmlns="http://www.opengis.net/kml/2.2">\n')
         fh.write('  <Folder>\n')
-        fh.write('    <name>' + self.name1 + '</name>\n')
-        fh.write('    <description>' + self.description1 + '</description>\n')
+        fh.write('    <name>' + self.name + '</name>\n')
+        fh.write('    <description>' + self.description + '</description>\n')
 
         for mapant_image in mapant_images:
-            print(mapant_image.name)
-
-            print(mapant_image.proj.world_file.c, mapant_image.proj.world_file.f)
+            # print(mapant_image.name)
+            # print(mapant_image.proj.world_file.c, mapant_image.proj.world_file.f)
             fh.write('    <GroundOverlay>\n')
             fh.write('      <name>' + mapant_image.name + '</name>\n')
             fh.write('      <description>' + mapant_image.description + '</description>\n')
@@ -227,7 +208,7 @@ class KMLGroundOverlay(object):
             fh.write('      <altitudeMode>clampToGround</altitudeMode>\n')
             if mode == "LatLonQuad":
                 corner_string = mapant_image.proj.transform_to_kml_latlonquad_corners()
-                print("String:", corner_string)
+                # print("String:", corner_string)
                 fh.write('      <gx:LatLonQuad>\n')
                 fh.write('        <coordinates>' + corner_string + '</coordinates>\n')
                 fh.write('      </gx:LatLonQuad>\n')
