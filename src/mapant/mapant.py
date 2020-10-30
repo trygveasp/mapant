@@ -44,18 +44,17 @@ class WorldFileFromFile(WorldFile):
 
 
 class MapantProjection(object):
-    def __init__(self, world_file, nx, ny):
+    def __init__(self, world_file, rotation=None):
         self.world_file = world_file
         proj_string = "+proj=utm +zone=33N +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
         self.projection = pyproj.Proj(proj_string)
-        self.nx = nx
-        self.ny = ny
         self.rotation_x = self.world_file.b
         self.rotation_y = self.world_file.d
         self.start_x = self.world_file.c
         self.start_y = self.world_file.f
         self.dx = self.world_file.a
         self.dy = self.world_file.e
+        self.rotation = rotation
         # print("Constructed MapantProjection ", self.start_x, self.start_y)
 
     # Transform UTM projection to target projection
@@ -64,125 +63,134 @@ class MapantProjection(object):
         positions = pyproj.transform(self.projection, out_projection, xx, yy)
         return positions
 
+
+class MapantProjectionFromWorldfile(MapantProjection):
+    def __init__(self, fname):
+        wf = WorldFileFromFile(fname)
+        MapantProjection.__init__(self, wf)
+
+
+class MapantImage(object):
+    def __init__(self, image, mapant_proj, nx, ny):
+        self.name = image
+        self.proj = mapant_proj
+        self.description = ""
+        self.nx = nx
+        self.ny = ny
+
+        self.gox = self.proj.start_x + self.proj.dx * 0.5
+        self.goy = self.proj.start_y - abs(self.proj.dy) * 0.5
+
+        # print("ox", self.gox)
+        # print("oy", self.goy)
+        self.olat, self.olon = self.proj.transform("EPSG:4326", self.gox, self.goy)
+        # print(self.olon, self.olat)
+
+        north_x = self.gox
+        north_y = self.goy + abs(self.proj.dy) * 0.5
+        self.north_lat, self.north_lon = self.proj.transform("EPSG:4326", north_x, north_y)
+        # print(self.north_lon, self.north_lat)
+        self.rotation = math.degrees(math.atan((self.olon - self.north_lon) / (self.north_lat - self.olat) / 2))
+
+        self.ll_lon, self.ll_lat, self.lr_lon, self.lr_lat, self.ur_lon, self.ur_lat, self.ul_lon, self.ul_lat = \
+            self.get_corners(self.gox, self.goy, self.proj.dx, abs(self.proj.dy))
+
+    def get_corners(self, gox, goy, dx, dy):
+        xx = []
+        yy = []
+
+        # Start in lower left, propagate counter-clockwise
+        # LL
+        xx.append(gox - (dx * 0.5))
+        yy.append(goy - (dy * 0.5))
+        # LR
+        xx.append(gox + (dx * 0.5))
+        yy.append(goy - (dy * 0.5))
+        # UR
+        xx.append(gox + (dx * 0.5))
+        yy.append(goy + (dy * 0.5))
+        # UL
+        xx.append(gox - (dx * 0.5))
+        yy.append(goy + (dy * 0.5))
+
+        pos = self.proj.transform("EPSG:4326", xx, yy)
+        return pos[1][0], pos[0][0], pos[1][1], pos[0][1], pos[1][2], pos[0][2], pos[1][3], pos[0][3],
+
     def transform_grid(self, proj_string):
         xx = []
         yy = []
         for y in range(0, self.ny):
             for x in range(0, self.nx):
-                xx.append(self.start_x + (float(x) * self.dx))
-                yy.append(self.start_y + (float(y) * self.dy))
+                xx.append(self.proj.start_x + (float(x) * self.proj.dx))
+                yy.append(self.proj.start_y + (float(y) * self.proj.dy))
 
-        positions = self.transform(proj_string, xx, yy)
+        positions = self.proj.transform(proj_string, xx, yy)
         return positions
 
-    def transform_to_kml_latlonquad_corners(self):
-        xx = []
-        yy = []
+    @staticmethod
+    def rotate_coordinate(cx, cy, ox, oy, rotation):
 
-        if self.rotation_x != 0 or self.rotation_y != 0:
-            raise NotImplementedError
+        # print("Rotating")
+        # Convert to radians
+        rotation = math.radians(rotation)
 
-        extra_x = float(self.dx) / 2.
-        extra_y = float(self.dy) / 2.
+        # Transform to origo
+        # squish = math.cos(latc)
+        cx = cx - ox
+        cy = cy - oy
 
-        # Start in lower left, propagate counter-clockwise
-        # LL
-        xx.append(self.start_x - extra_x)
-        yy.append(self.start_y - extra_y + ((self.ny + 1) * self.dy))
-        # LR
-        xx.append(self.start_x - extra_x + ((self.nx + 1) * self.dx))
-        yy.append(self.start_y - extra_y + ((self.ny + 1) * self.dy))
-        # UR
-        xx.append(self.start_x - extra_x + ((self.nx + 1) * self.dx))
-        yy.append(self.start_y - extra_y)
-        # UL
-        xx.append(self.start_x - extra_x)
-        yy.append(self.start_y - extra_y)
+        # Rotate coordinates:
+        cxr = cx * math.cos(rotation) - cy * math.sin(rotation)
+        cyr = cx * math.sin(rotation) + cy * math.cos(rotation)
 
-        pos = self.transform("EPSG:4326", xx, yy)
+        # Adjust for origo
+        cxr = cxr + ox
+        cyr = cyr + oy
+        return cxr, cyr
 
-        string = ""
-        for p in range(0, len(pos[0])):
-            string = string + " " + str(pos[1][p]) + "," + str(pos[0][p])
-        # print(string)
-        return string
+    def get_mid_box_point(self, cx, cy, gox, goy):
 
-    def transform_to_kml_latlonbox(self):
-
-        if self.rotation_x != 0 or self.rotation_y != 0:
-            raise NotImplementedError
-
-        extra_x = float(self.dx) * 0.5
-        extra_y = float(self.dy) * 0.5
-        nx = float(self.nx) * 0.5
-        ny = float(self.ny) * 0.5
-
-        center_x = self.start_x + (nx * self.dx)
-        center_y = self.start_y + (ny * self.dy)
-
-        x_west = self.start_x - extra_x
-        x_east = self.start_x - extra_x + ((self.nx + 1) * self.dx)
-        y_north = self.start_y - extra_y
-        y_south = self.start_y - extra_y + ((self.ny + 1) * self.dy)
-
-        xx = []
-        yy = []
-        # North
-        xx.append(center_x)
-        yy.append(y_north)
-        # South
-        xx.append(center_x)
-        yy.append(y_south)
-        # West
-        xx.append(x_west)
-        yy.append(center_y)
-        # East
-        xx.append(x_east)
-        yy.append(center_y)
-
-        pos = self.transform("EPSG:4326", xx, yy)
-        north = pos[0][0]
-        south = pos[0][1]
-        west = pos[1][2]
-        east = pos[1][3]
-
-        pos = self.transform("EPSG:4326", [x_west, x_west], [y_north, y_south])
-        nw_lng = float(pos[1][0])
-        nw_lat = float(pos[0][0])
-        sw_lng = float(pos[1][1])
-        sw_lat = float(pos[0][1])
-        rotation = math.degrees(math.atan((nw_lng - sw_lng) / (sw_lat - nw_lat) / 2))
-        # rotation = 0
-
-        # print("nx, ny", nx, ny, self.nx, self.ny)
-        # print("center", center_lon, center_lat, center_x, center_y)
-        # print("north, south, west, east, rotation: ", north, south, west, east, rotation)
-        return north, south, west, east, rotation
+        cxr1, cyr1 = self.rotate_coordinate(cx, cy, gox, goy, -self.rotation)
+        pos = self.proj.transform("EPSG:4326", cxr1, cyr1)
+        lat = pos[0]
+        lon = pos[1]
+        # print("rotated geographic mid point", lon, lat)
+        return lon, lat
 
 
-class MapantProjectionFromWorldfile(MapantProjection):
-    def __init__(self, fname, nx, ny):
-        wf = WorldFileFromFile(fname)
-        MapantProjection.__init__(self, wf, nx, ny)
-
-
-class MapantImage(object):
-    def __init__(self, image, mapant_proj):
-        self.name = image
-        self.proj = mapant_proj
-        self.description = ""
+class ImageTile(object):
+    def __init__(self, filename, name="", description="", north=None, south=None, east=None, west=None,
+                 rotation=None, ll_lon=None, ll_lat=None, lr_lon=None, lr_lat=None, ur_lon=None, ur_lat=None,
+                 ul_lon=None, ul_lat=None):
+        self.filename = filename
+        self.name = name
+        self.description = description
+        self.north = north
+        self.south = south
+        self.west = west
+        self.east = east
+        self.rotation = rotation
+        self.ll_lon = ll_lon
+        self.ll_lat = ll_lat
+        self.lr_lon = lr_lon
+        self.lr_lat = lr_lat
+        self.ur_lon = ur_lon
+        self.ur_lat = ur_lat
+        self.ul_lon = ul_lon
+        self.ul_lat = ul_lat
 
 
 class KMLGroundOverlay(object):
-    def __init__(self, name=None, desc=None):
+    def __init__(self, image, name=None, desc=None):
         if name is None:
             name = "Name of data"
         if desc is None:
             desc = "Description of the data"
+        self.image = image
         self.name = name
         self.description = desc
 
-    def write_kml(self, fname, mapant_images, mode="LatLonBox"):
+    def write_kml(self, fname, tiles, mode="LatLonBox"):
 
         fh = open(fname, "w")
         fh.write('<?xml version="1.0" encoding="UTF-8"?>\n')
@@ -194,32 +202,31 @@ class KMLGroundOverlay(object):
         fh.write('    <name>' + self.name + '</name>\n')
         fh.write('    <description>' + self.description + '</description>\n')
 
-        for mapant_image in mapant_images:
-            # print(mapant_image.name)
-            # print(mapant_image.proj.world_file.c, mapant_image.proj.world_file.f)
+        for tile in tiles:
             fh.write('    <GroundOverlay>\n')
-            fh.write('      <name>' + mapant_image.name + '</name>\n')
-            fh.write('      <description>' + mapant_image.description + '</description>\n')
+            fh.write('      <name>' + tile.name + '</name>\n')
+            fh.write('      <description>' + tile.description + '</description>\n')
             fh.write('      <drawOrder>50</drawOrder>\n')
             fh.write('      <Icon>\n')
-            fh.write('         <href>files/' + mapant_image.name + '</href>\n')
-            # fh.write('         <viewBoundScale>1</viewBoundScale>\n')
+            fh.write('         <href>files/' + tile.filename + '</href>\n')
             fh.write('      </Icon>\n')
             fh.write('      <altitudeMode>clampToGround</altitudeMode>\n')
             if mode == "LatLonQuad":
-                corner_string = mapant_image.proj.transform_to_kml_latlonquad_corners()
-                # print("String:", corner_string)
+                corner_string = str(tile.ll_lon) + "," + str(tile.ll_lat) + " " +\
+                                str(tile.lr_lon) + "," + str(tile.lr_lat) + " " +\
+                                str(tile.ur_lon) + "," + str(tile.ur_lat) + " " +\
+                                str(tile.ul_lon) + "," + str(tile.ul_lat)
+                print("String:", corner_string)
                 fh.write('      <gx:LatLonQuad>\n')
                 fh.write('        <coordinates>' + corner_string + '</coordinates>\n')
                 fh.write('      </gx:LatLonQuad>\n')
             elif mode == "LatLonBox":
-                north, south, west, east, rotation = mapant_image.proj.transform_to_kml_latlonbox()
                 fh.write('      <LatLonBox>\n')
-                fh.write('        <north>' + str(north) + '</north>\n')
-                fh.write('        <south>' + str(south) + '</south>\n')
-                fh.write('        <west>' + str(west) + '</west>\n')
-                fh.write('        <east>' + str(east) + '</east>\n')
-                fh.write('        <rotation>' + str(rotation) + '</rotation>\n')
+                fh.write('        <north>' + str(tile.north) + '</north>\n')
+                fh.write('        <south>' + str(tile.south) + '</south>\n')
+                fh.write('        <east>' + str(tile.east) + '</east>\n')
+                fh.write('        <west>' + str(tile.west) + '</west>\n')
+                fh.write('        <rotation>' + str(tile.rotation) + '</rotation>\n')
                 fh.write('      </LatLonBox>\n')
             else:
                 raise NotImplementedError
