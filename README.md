@@ -36,3 +36,6 @@ Get data to test on. For example from the examples diectory (by wget or simply d
 Run the generation
 > mapant2kml -w mapant-export-211859-6656711-215781-6660648.pgw -i mapant-export-211859-6656711-215781-6660648.png 
 >-o examples/Example.kmz -nx 4016 -ny 4031 -dx 1536 -dy 1536
+
+See also the unit tests in tests directory
+
