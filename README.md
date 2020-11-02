@@ -10,7 +10,7 @@ world file with suffix .pgw. Those two files are expected as input to this packa
 
 Example of a kmz file generated from the example data and visualized in google earth. 
 
-![alt](https://github.com/trygveasp/mapant/tree/main/src/examples/mapant.png)
+![alt](https://raw.githubusercontent.com/trygveasp/mapant/main/examples/mapant.png)
 
 The result kmz file can be uploaded to your garmin GPS in the /GARMIN/CustomMaps folder. 
 See alsp step 14,15, and 16 in https://support.garmin.com/en-US/?faq=cVuMqGHWaM7wTFWMkPNLN9
@@ -28,10 +28,10 @@ Or in a local user installation:
 
 #Examples:  
 
-Get data to test on. For example from the examples diectory.
-> wget -b https://github.com/trygveasp/mapant/tree/main/src/examples/mapant-export-211859-6656711-215781-6660648.pgw
+Get data to test on. For example from the examples diectory (by wget or simply download the data).
+> wget https://raw.githubusercontent.com/trygveasp/mapant/main/examples/mapant-export-211859-6656711-215781-6660648.pgw
 >
-> wget -b https://github.com/trygveasp/mapant/tree/main/src/examples/mapant-export-211859-6656711-215781-6660648.png
+> wget https://raw.githubusercontent.com/trygveasp/mapant/main/examples/mapant-export-211859-6656711-215781-6660648.png
 
 Run the generation
 > mapant2kml -w mapant-export-211859-6656711-215781-6660648.pgw -i mapant-export-211859-6656711-215781-6660648.png 
