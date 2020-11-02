@@ -27,6 +27,7 @@ class RunKLM(unittest.TestCase):
             "name_of_data": "name_of_data",
             "description_of_data": "description_of_data",
             "mode": "LatLonBox",
-            "output": "test.kmz"
+            "output": "test.kmz",
+            "unit_test": True
         }
         mapant.mapant2kml(**kwargs)

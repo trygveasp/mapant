@@ -67,6 +67,9 @@ def mapant2kml(**kwargs):
     else:
         quality = " -quality " + str(quality) + " "
     mode = kwargs["mode"]
+    unit_test = False
+    if "unit_test" in kwargs:
+        unit_test = kwargs["unit_test"]
     no_abort_on_filesize = False
     if "no_abort_on_filesize" in kwargs:
         no_abort_on_filesize = kwargs["no_abort_on_filesize"]
@@ -157,8 +160,14 @@ def mapant2kml(**kwargs):
                 cmd = "convert " + quality + "-extract " + str(this_slice_sixe_pixels_x) + "x" + \
                       str(this_slice_sixe_pixels_y) + \
                     "+" + im_start_x + "+" + im_start_y + " " + filename + " " + im_name
-                print(cmd)
-                os.system(cmd)
+                # Do not convert when unit testing. We then need convert avilable from all platforms
+                if unit_test:
+                    fh = open(im_name, "w")
+                    fh.write("Dummy")
+                    fh.close()
+                else:
+                    print(cmd)
+                    os.system(cmd)
             else:
                 im_name = im_path_root + "/files/" + os.path.basename(filename)
                 if not os.path.exists(im_name):
