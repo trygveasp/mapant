@@ -26,7 +26,7 @@ This package is available from pypi with the python pip intallation command
 Or in a local user installation:
 > pip3 install --user mapant 
 
-#Examples:  
+# Examples:  
 
 Get data to test on. For example from the examples diectory (by wget or simply download the data).
 > wget https://raw.githubusercontent.com/trygveasp/mapant/main/examples/mapant-export-211859-6656711-215781-6660648.pgw
