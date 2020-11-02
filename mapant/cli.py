@@ -73,6 +73,8 @@ def mapant2kml(**kwargs):
     proj = mapant.MapantProjectionFromWorldfile(world_filename)
     image = mapant.MapantImage(filename, proj, npixelx, npixely)
     im_path_root = os.path.dirname(output)
+    if im_path_root == "":
+        im_path_root = os.getcwd()
 
     # Check if we must convert
     if int(npixelx) <= int(slice_size_x) and int(npixely) <= int(slice_size_y):
