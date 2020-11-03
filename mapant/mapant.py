@@ -47,7 +47,7 @@ class MapantProjection(object):
     def __init__(self, world_file, rotation=None):
         self.world_file = world_file
         proj_string = "+proj=utm +zone=33N +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-        self.projection = pyproj.Proj(proj_string)
+        self.projection = pyproj.CRS.from_string(proj_string)
         self.rotation_x = self.world_file.b
         self.rotation_y = self.world_file.d
         self.start_x = self.world_file.c
@@ -59,8 +59,8 @@ class MapantProjection(object):
 
     # Transform UTM projection to target projection
     def transform(self, proj_string, xx, yy):
-        out_projection = pyproj.Proj(proj_string)
-        positions = pyproj.transform(self.projection, out_projection, xx, yy)
+        out_projection = pyproj.CRS.from_string(proj_string)
+        positions = pyproj.Transformer.from_crs(self.projection, out_projection).transform(xx, yy)
         return positions
 
 
