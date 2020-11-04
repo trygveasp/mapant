@@ -26,7 +26,7 @@ This package is available from pypi with the python pip intallation command
 Or in a local user installation:
 > pip3 install --user mapant 
 
-# Examples:  
+### Examples:  
 
 Get data to test on. For example from the examples diectory (by wget or simply download the data).
 > wget https://raw.githubusercontent.com/trygveasp/mapant/main/examples/mapant-export-211859-6656711-215781-6660648.pgw
@@ -39,3 +39,52 @@ Run the generation
 
 See also the unit tests in tests directory
 
+
+# Tutorial on windows
+
+User guide mapant2kml on windows
+
+### Install python
+
+Open prompt:
+ - Windows key + x
+ - Run (kjør)
+ - Type cmd.exe
+ - Type python
+ 
+For me a Windows Store window popped up
+Install the free app for Python 3.8
+
+### Install pip
+See also https://phoenixnap.com/kb/install-pip-windows (PIP is the Python repository 
+package)
+ - download https://bootstrap.pypa.io/get-pip.py
+ - run “python get-pip.py”
+
+### Install mapant with pip
+python -m pip install mapant
+
+So where is it installed? Try running: “pip3 -V”
+This will show you the pip installation. The mapant2kml script is installed in the 
+Scripts directory in the same location structure. See also example part.
+
+### Install dependency
+Mapant2kml has (at least for now) one external dependency in the convert program from 
+ImageMagick (https://imagemagick.org/script/download.php) (free, open source)
+
+Install one of the installations, e.g. ImageMagick-7.0.10-35-Q16-HDRI-x64-dll.exe
+
+NB! Tick the box about legacy utilities (convert) which is NOT ticked by default
+
+### Run mapant example
+Now we are ready to run the example from https://github.com/trygveasp/mapant#examples. 
+Download the data and run mapant2kml as described.
+
+
+### Visualization of your finished kmz file
+Install google earth
+open Example.kmz which we generated
+You should get the example map shown above.
+
+There is plenty of room for improvement in this windows tools by experienced windows user unlike myself. 
+Please come with suggestions on how to thing different and in a simpler way.
