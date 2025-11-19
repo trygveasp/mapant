@@ -155,11 +155,9 @@ def mapant2kml(**kwargs):
 
             os.makedirs(im_path_root + "/files", exist_ok=True)
             if convert:
-                im_name = im_path_root + "/files/tile_x_" + im_start_x + "_" + im_end_x + "_y_" + im_start_y + \
-                          "_" + im_end_y + ".jpg"
-                cmd = "convert " + quality + "-extract " + str(this_slice_sixe_pixels_x) + "x" + \
-                      str(this_slice_sixe_pixels_y) + \
-                    "+" + im_start_x + "+" + im_start_y + " " + filename + " " + im_name
+                im_name = f"files/tile_x_{im_start_x}_{im_end_x}_y_{im_start_y}_{im_end_y}.jpg"
+                im_name_path = f"{im_path_root}/{im_name}"
+                cmd = f"convert {quality} -extract {str(this_slice_sixe_pixels_x)}x{str(this_slice_sixe_pixels_y)}+{im_start_x}+{im_start_y} {filename} -interlace none {im_name_path}"
                 # Do not convert when unit testing. We then need convert avilable from all platforms
                 if unit_test:
                     fh = open(im_name, "w")
@@ -169,7 +167,8 @@ def mapant2kml(**kwargs):
                     print(cmd)
                     os.system(cmd)
             else:
-                im_name = im_path_root + "/files/" + os.path.basename(filename)
+                im_name = f"files/{os.path.basename(filename)}"
+                im_name_path = f"{im_path_root}/{im_name}"
                 if not os.path.exists(im_name):
                     os.makedirs(im_path_root + "/files", exist_ok=True)
                     shutil.copy(filename, im_name)
