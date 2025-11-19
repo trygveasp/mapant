@@ -46,7 +46,7 @@ class WorldFileFromFile(WorldFile):
 class MapantProjection(object):
     def __init__(self, world_file, rotation=None):
         self.world_file = world_file
-        proj_string = "+proj=utm +zone=33N +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+        proj_string = "+proj=utm +zone=33 +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
         self.projection = pyproj.CRS.from_string(proj_string)
         self.rotation_x = self.world_file.b
         self.rotation_y = self.world_file.d
